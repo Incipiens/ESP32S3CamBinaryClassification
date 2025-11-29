@@ -1,0 +1,64 @@
+# ESP32-S3 CAM binary image classifier using TensorFlow Lite
+
+This is an ESP32-S3 binary image classifier, built for the ESP32-S3 CAM. It comes with two applications:
+
+* ESP32S3 Binary Classifier
+* Classifier and Model Training
+
+This was written for an [XDA article](https://www.xda-developers.com/train-image-classification-model-esp32/).
+
+## Classifier and Model Training
+
+To train your own model, you'll first need to install the TensorFlow Python package using Pip. At the time of writing, TensorFlow is not available in Python 3.14. You can install Python 3.13, select the interpreter in VS Code, and create a virtual environment from VS Code in order to use an older version than the one installed on your system.
+
+Once your Python instance is ready, install TensorFlow.
+
+```bash
+pip install tensorflow
+```
+
+Inside of "dataset", create two folders. These two folders will serve as the labels for your images. I recommend using images taken on the device you intend to deploy to, so that images retain the same features in the training set and on-device. I used 12 images for each, but the more the better. A minimum of 100 images should really be your starting point.
+
+You'll need to modify the following variables in training.py.
+
+* NUM_IMAGES
+* EPOCHS
+* MODEL_NAME
+
+Epochs are how many iterations over the data the classifier will run. More epochs will result in overfitting when dealing with a smaller dataset, but I used more for demonstration purposes.
+
+Once your images are prepared and you've changed the model name, simply run:
+
+```bash
+python3 training.py
+```
+
+You'll get the following outputs:
+
+* (model_name)_fp32.keras
+* (model_name)_int8.tflite
+* model_data.h
+* labels.txt
+
+From `labels.txt`, create the following `labels.h` file:
+
+```C
+#pragma once
+
+// Match labels.txt order
+static const char* kLabels[] = {
+    "LABEL1",
+    "LABEL2",
+};
+static const int kNumLabels = 2;
+```
+
+Retain the same order as in `labels.txt`. I have also included a `labels.h` file that you can modify.
+
+## ESP32S3 Binary Classifier
+
+This is a PlatformIO project. Copy `model_data.h` and `labels.h` from the training output and place them inside src/. I have created a stripped TensorFlow Lite library contained in /lib, as otherwise, it would not compile because of the "screen" component of the library. If you'd prefer, you can try to use the official TensorFlow Lite library, though mine is the same as version 1.0.0, just without the screen component.
+
+Once you've imported the project to PlatformIO, modify `main.cpp` and replace "WIFI NAME" and "WIFI PASSWORD" with your network details. Compile the application and upload it to your ESP32-S3. 
+
+Inference takes approximately 10 seconds per cycle, where a snapshot is grabbed from the camera and the image is classified. I have disabled the task watchdog as a result of this inference time, but this is a last resort and should be avoided. There are ways to make this classifier significantly more efficient.
